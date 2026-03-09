@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maps Lead Finder — Find Businesses Without Websites</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════ HEADER ══ -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">📍</span>
+        <span class="logo-text">Maps<strong>Lead</strong>Finder</span>
+      </div>
+      <p class="tagline">Discover local businesses that need a website — close more freelance deals.</p>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════ SEARCH ══ -->
+  <section class="search-section">
+    <div class="search-card">
+      <h2 class="search-heading">Find Your Next Client</h2>
+      <p class="search-sub">Enter a business type and location — we'll find the leads for you.</p>
+
+      <form method="POST" action="/search" id="searchForm">
+        <div class="input-row">
+          <input
+            type="text"
+            name="query"
+            id="queryInput"
+            class="search-input"
+            placeholder='e.g. "barbershop Nairobi" or "salon Westlands"'
+            value="{{ query }}"
+            required
+            autocomplete="off"
+          />
+          <button type="submit" class="btn-generate" id="generateBtn">
+            <span class="btn-text">Generate Leads</span>
+            <span class="btn-spinner hidden" aria-hidden="true"></span>
+          </button>
+        </div>
+
+        <!-- Quick-pick chips -->
+        <div class="chips">
+          <span class="chip-label">Quick picks:</span>
+          <button type="button" class="chip" data-query="barbershop Nairobi">Barbershop Nairobi</button>
+          <button type="button" class="chip" data-query="salon Westlands">Salon Westlands</button>
+          <button type="button" class="chip" data-query="car wash Nairobi">Car Wash Nairobi</button>
+          <button type="button" class="chip" data-query="gym Nairobi">Gym Nairobi</button>
+          <button type="button" class="chip" data-query="restaurant Nairobi">Restaurant Nairobi</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════ LOADING ══ -->
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-box">
+      <div class="spinner-ring"></div>
+      <p class="loading-title">Scraping Google Maps…</p>
+      <p class="loading-sub">This can take 2–4 minutes depending on the number of results.</p>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ ERROR ══ -->
+  {% if error %}
+  <section class="container">
+    <div class="alert alert-error">
+      <span class="alert-icon">⚠️</span>
+      <span>{{ error }}</span>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ═══════════════════════════════════════ RESULTS ══ -->
+  {% if results %}
+  <section class="results-section container">
+
+    <!-- Summary cards -->
+    <div class="summary-grid">
+      <div class="summary-card">
+        <span class="summary-number">{{ summary.total }}</span>
+        <span class="summary-label">Businesses Scraped</span>
+      </div>
+      <div class="summary-card accent-green">
+        <span class="summary-number">{{ summary.no_website }}</span>
+        <span class="summary-label">Without a Website</span>
+      </div>
+      <div class="summary-card accent-orange">
+        <span class="summary-number">{{ summary.highest_score }}</span>
+        <span class="summary-label">Highest Opportunity Score</span>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <span class="filter-label">Filter by opportunity:</span>
+      <button class="filter-btn active" data-filter="all">All ({{ results | length }})</button>
+      <button class="filter-btn high"   data-filter="HIGH">
+        HIGH ({{ results | selectattr('opportunity', 'equalto', 'HIGH') | list | length }})
+      </button>
+      <button class="filter-btn medium" data-filter="MEDIUM">
+        MEDIUM ({{ results | selectattr('opportunity', 'equalto', 'MEDIUM') | list | length }})
+      </button>
+      <button class="filter-btn low"    data-filter="LOW">
+        LOW ({{ results | selectattr('opportunity', 'equalto', 'LOW') | list | length }})
+      </button>
+    </div>
+
+    <!-- Results table -->
+    <div class="table-wrapper">
+      <table class="leads-table" id="leadsTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Business Name</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Rating</th>
+            <th>Reviews</th>
+            <th>Website</th>
+            <th>Score</th>
+            <th>Opportunity</th>
+            <th>Maps Link</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for biz in results %}
+          <tr class="lead-row" data-opportunity="{{ biz.opportunity }}">
+            <td class="col-num">{{ loop.index }}</td>
+            <td class="col-name">{{ biz.name }}</td>
+            <td class="col-phone">
+              {% if biz.phone %}
+                <a href="tel:{{ biz.phone }}">{{ biz.phone }}</a>
+              {% else %}
+                <span class="none-tag">—</span>
+              {% endif %}
+            </td>
+            <td class="col-address">{{ biz.address or "—" }}</td>
+            <td class="col-rating">
+              {% if biz.rating %}
+                <span class="stars">★ {{ "%.1f"|format(biz.rating) }}</span>
+              {% else %}
+                <span class="none-tag">—</span>
+              {% endif %}
+            </td>
+            <td class="col-reviews">{{ biz.reviews if biz.reviews else "—" }}</td>
+            <td class="col-website">
+              {% if biz.website %}
+                <a href="{{ biz.website }}" target="_blank" rel="noopener" class="website-link">
+                  🔗 Visit
+                </a>
+              {% else %}
+                <span class="no-website-tag">No Website</span>
+              {% endif %}
+            </td>
+            <td class="col-score">
+              <div class="score-pill score-{{ biz.opportunity | lower }}">
+                {{ biz.score }}
+              </div>
+            </td>
+            <td class="col-opportunity">
+              <span class="opp-badge opp-{{ biz.opportunity | lower }}">{{ biz.opportunity }}</span>
+            </td>
+            <td class="col-maps">
+              {% if biz.maps_url %}
+                <a href="{{ biz.maps_url }}" target="_blank" rel="noopener" class="maps-btn">
+                  View ↗
+                </a>
+              {% else %}
+                <span class="none-tag">—</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </section>
+  {% endif %}
+
+  <!-- ═══════════════════════════════════════ FOOTER ══ -->
+  <footer class="site-footer">
+    <p>MapsLeadFinder &copy; 2025 — Built for freelancers &amp; web developers</p>
+  </footer>
+
+  <!-- ═══════════════════════════════════════ JS ══ -->
+  <script>
+    // ── Loading overlay ──────────────────────────────────────────────────────
+    const form        = document.getElementById('searchForm');
+    const generateBtn = document.getElementById('generateBtn');
+    const overlay     = document.getElementById('loadingOverlay');
+    const btnText     = generateBtn.querySelector('.btn-text');
+    const btnSpinner  = generateBtn.querySelector('.btn-spinner');
+
+    form.addEventListener('submit', () => {
+      // Show overlay + disable button
+      overlay.classList.remove('hidden');
+      generateBtn.disabled = true;
+      btnText.textContent = 'Searching…';
+      btnSpinner.classList.remove('hidden');
+    });
+
+    // ── Quick-pick chips ──────────────────────────────────────────────────────
+    document.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.getElementById('queryInput').value = chip.dataset.query;
+      });
+    });
+
+    // ── Table filtering ───────────────────────────────────────────────────────
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        const filter = btn.dataset.filter;
+        document.querySelectorAll('.lead-row').forEach(row => {
+          if (filter === 'all' || row.dataset.opportunity === filter) {
+            row.style.display = '';
+          } else {
+            row.style.display = 'none';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
