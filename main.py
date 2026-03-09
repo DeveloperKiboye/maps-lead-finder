@@ -1,6 +1,14 @@
 import asyncio
 import sys
 
+import subprocess
+import os
+
+# Install Playwright browsers at startup if not present
+chromium_path = "/opt/render/.cache/ms-playwright/chromium-1117/chrome-linux/chrome"
+if not os.path.exists(chromium_path):
+    subprocess.run(["playwright", "install", "chromium"], check=True)
+
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
