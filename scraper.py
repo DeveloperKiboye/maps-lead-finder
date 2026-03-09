@@ -13,9 +13,9 @@ from playwright.sync_api import sync_playwright, Page, TimeoutError as Playwrigh
 
 logger = logging.getLogger(__name__)
 
-MAX_LISTINGS = 100
+MAX_LISTINGS = 10
 SCROLL_PAUSE = 2.0
-ACTION_DELAY = 1.5
+ACTION_DELAY = 0.8
 LISTING_TIMEOUT = 10_000
 NAV_TIMEOUT = 60_000
 
